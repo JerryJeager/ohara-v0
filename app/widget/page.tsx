@@ -1,10 +1,19 @@
+import OharaWidget from '@/components/ohara-widget'
 
-const Widget = () => {
-  return (
-    <div className="bg-white h-screen text-black p-20">
-        <p>this is the widget chat ui</p>
-    </div>
-  )
+export default function WidgetPage() {
+  return <OharaWidget />
 }
 
-export default Widget
+export const metadata = {
+  title: 'Ohara — AI support widget',
+  description: 'A clear, helpful AI assistant for your website visitors.',
+}
+
+export const viewport = {
+  colorScheme: 'light' as const,
+  themeColor: '#232322',
+}
+
+export const dynamic = 'force-dynamic'
+
+// The widget route is intentionally chrome-free so it can be mounted inside an iframe.
