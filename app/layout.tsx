@@ -3,8 +3,8 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Ohara — Chat with any website',
-  description: 'Create an AI assistant that answers questions using information from any website.',
+  title: 'Ohara — AI support for your website',
+  description: 'Turn your website into an AI support assistant. Ohara learns from your content and helps visitors find answers instantly.',
   generator: 'Ohara',
   icons: {
     icon: [
