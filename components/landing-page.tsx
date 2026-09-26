@@ -12,6 +12,8 @@ import {
   Sparkles,
   WandSparkles,
 } from "lucide-react";
+import Image from "next/image";
+import logo from "../public/ohara-logo.png"
 
 const benefits = [
   {
@@ -94,8 +96,8 @@ function Logo() {
       className="flex items-center gap-2 font-semibold tracking-tight"
       aria-label="Ohara home"
     >
-      <span className="grid size-7 place-items-center rounded-lg bg-primary text-primary-foreground">
-        <Sparkles className="size-3.5" />
+      <span className="grid size-10 md:size-12  place-items-center rounded-lg text-primary-foreground">
+        <Image alt={"Ohara-logo"} className="rounded-full"  src={logo} />
       </span>
       Ohara
     </a>
