@@ -13,7 +13,7 @@ import {
   WandSparkles,
 } from "lucide-react";
 import Image from "next/image";
-import logo from "../public/ohara-logo.png"
+import logo from "../public/ohara-logo.png";
 
 const benefits = [
   {
@@ -97,7 +97,7 @@ function Logo() {
       aria-label="Ohara home"
     >
       <span className="grid size-10 md:size-12  place-items-center rounded-lg text-primary-foreground">
-        <Image alt={"Ohara-logo"} className="rounded-full"  src={logo} />
+        <Image alt={"Ohara-logo"} className="rounded-full" src={logo} />
       </span>
       Ohara
     </a>
@@ -113,14 +113,14 @@ function ChatMockup() {
           <span className="size-2 rounded-full bg-slate-300" />
           <span className="size-2 rounded-full bg-slate-300" />
           <div className="mx-auto rounded-md bg-slate-100 px-20 py-1 text-[9px] text-slate-400 sm:px-32">
-            acme.studio
+            loop.studio
           </div>
         </div>
         <div className="grid min-h-[350px] grid-cols-1 bg-white md:grid-cols-[1fr_270px]">
           <div className="relative p-6 sm:p-10">
             <div className="mb-10 flex items-center justify-between text-xs font-semibold">
               <span>
-                ACME<span className="text-indigo-500">/</span>STUDIO
+                LOOP<span className="text-indigo-500">/</span>STUDIO
               </span>
               <div className="hidden gap-5 text-[10px] font-normal text-slate-400 sm:flex">
                 <span>Services</span>
@@ -143,14 +143,14 @@ function ChatMockup() {
               </div>
             </div>
             <div className="absolute bottom-5 left-6 right-6 flex items-center justify-between text-[10px] text-slate-400 sm:left-10 sm:right-10">
-              <span>Selected work 2024</span>
+              <span>Selected work 2026</span>
               <span>Scroll to explore ↓</span>
             </div>
           </div>
           <div className="flex flex-col border-t border-slate-200 bg-white md:border-l md:border-t-0">
             <div className="flex items-center gap-2 border-b border-slate-200 px-4 py-3">
-              <span className="grid size-7 place-items-center rounded-full bg-indigo-600 text-white">
-                <Sparkles className="size-3.5" />
+              <span className="grid size-8 md:size-10  place-items-center rounded-lg text-primary-foreground">
+                <Image alt={"Ohara-logo"} className="rounded-full" src={logo} />
               </span>
               <div>
                 <p className="text-xs font-semibold">Ask Ohara</p>
@@ -184,7 +184,7 @@ function ChatMockup() {
       </div>
       <div className="pointer-events-none absolute -bottom-4 -right-3 hidden rounded-xl border border-indigo-400/20 bg-indigo-500/10 px-3 py-2 text-[10px] text-indigo-200 shadow-xl sm:flex sm:items-center sm:gap-2">
         <span className="size-1.5 rounded-full bg-emerald-400" />
-        Live on acme.studio
+        Live on loop.studio
       </div>
     </div>
   );
@@ -211,7 +211,7 @@ export function LandingPage() {
           </a>
         </div>
         <div className="flex items-center gap-3">
-          <Button  size="sm" className="rounded-full px-4">
+          <Button size="sm" className="rounded-full px-4">
             <a href="/dashboard">
               <GoogleIcon />
               Continue with Google
@@ -220,10 +220,6 @@ export function LandingPage() {
         </div>
       </nav>
       <section className="relative z-10 mx-auto flex max-w-4xl flex-col items-center px-5 pb-20 pt-20 text-center sm:px-8 sm:pt-28">
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1.5 text-xs text-primary">
-          <span className="size-1.5 rounded-full bg-primary" />
-          The support layer for your website
-        </div>
         <h1 className="max-w-3xl text-balance text-primary text-5xl font-semibold leading-[1.04] tracking-[-.05em] sm:text-7xl">
           Answers your customers can actually use.
           {/* <span className="text-primary">AI support assistant.</span> */}
@@ -233,14 +229,13 @@ export function LandingPage() {
           from your site’s content and helps visitors find answers instantly.
         </p>
         <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row">
-          <Button  size="lg" className="h-11 rounded-full px-6">
+          <Button size="lg" className="h-11 rounded-full px-6">
             <a href="/dashboard">
               <GoogleIcon />
               Continue with Google
             </a>
           </Button>
           <Button
-            
             variant="outline"
             size="lg"
             className="h-11 rounded-full px-6"
@@ -351,7 +346,7 @@ export function LandingPage() {
               Create your assistant, embed the widget, and help visitors find
               answers faster.
             </p>
-            <Button  size="lg" className="mt-8 h-11 rounded-full px-6">
+            <Button size="lg" className="mt-8 h-11 rounded-full px-6">
               <a href="/dashboard">
                 <GoogleIcon />
                 Continue with Google
