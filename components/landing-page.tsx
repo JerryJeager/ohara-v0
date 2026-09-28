@@ -1,3 +1,4 @@
+"use client";
 import { Button } from "@/components/ui/button";
 import {
   ArrowRight,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import logo from "../public/ohara-logo.png";
+import { GoogleLogin, googleLogout, useGoogleLogin } from "@react-oauth/google";
 
 const benefits = [
   {
@@ -191,6 +193,19 @@ function ChatMockup() {
 }
 
 export function LandingPage() {
+  const login = useGoogleLogin({
+    onSuccess: (tokenResponse) => console.log("token response", tokenResponse),
+    onError: ({ error }) => console.log("error after login", error),
+  });
+
+  const handleFailure = () => {
+    console.log("Login Failed");
+  };
+
+  const handleLogout = () => {
+    googleLogout(); // Triggers SDK cleanup
+    // setUser(null);
+  };
   return (
     <main id="top" className="overflow-hidden bg-background">
       <div className="absolute inset-x-0 top-0 -z-0 h-[620px] bg-[radial-gradient(ellipse_at_top,rgba(94,92,230,.15),transparent_65%)]" />
@@ -211,11 +226,13 @@ export function LandingPage() {
           </a>
         </div>
         <div className="flex items-center gap-3">
-          <Button size="sm" className="rounded-full px-4">
-            <a href="/dashboard">
-              <GoogleIcon />
-              Continue with Google
-            </a>
+          <Button
+            onClick={() => login()}
+            size="sm"
+            className="rounded-full  p-4"
+          >
+            <GoogleIcon />
+            <span>Continue with Google</span>
           </Button>
         </div>
       </nav>
@@ -229,19 +246,21 @@ export function LandingPage() {
           from your site’s content and helps visitors find answers instantly.
         </p>
         <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row">
-          <Button size="lg" className="h-11 rounded-full px-6">
-            <a href="/dashboard">
-              <GoogleIcon />
-              Continue with Google
-            </a>
+          <Button
+            onClick={() => login()}
+            size="sm"
+            className="rounded-full  p-4"
+          >
+            <GoogleIcon />
+            <span>Continue with Google</span>
           </Button>
           <Button
             variant="outline"
             size="lg"
             className="h-11 rounded-full px-6"
           >
-            <a href="#how-it-works">
-              See how it works <ChevronRight data-icon="inline-end" />
+            <a href="#how-it-works" className="flex gap-2 items-center">
+              <span>See how it works</span> <ChevronRight data-icon="inline-end" />
             </a>
           </Button>
         </div>
@@ -346,11 +365,13 @@ export function LandingPage() {
               Create your assistant, embed the widget, and help visitors find
               answers faster.
             </p>
-            <Button size="lg" className="mt-8 h-11 rounded-full px-6">
-              <a href="/dashboard">
-                <GoogleIcon />
-                Continue with Google
-              </a>
+            <Button
+              onClick={() => login()}
+              size="sm"
+              className="rounded-full mt-4  p-4"
+            >
+              <GoogleIcon />
+              <span>Continue with Google</span>
             </Button>
           </div>
         </div>
