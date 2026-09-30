@@ -16,6 +16,10 @@ import {
 import Image from "next/image";
 import logo from "../public/ohara-logo.png";
 import { GoogleLogin, googleLogout, useGoogleLogin } from "@react-oauth/google";
+import axios from "axios";
+import { BASE_URL } from "@/data/websites";
+import { storeCookie } from "@/actions/handleCookies";
+import { useRouter } from "next/navigation";
 
 const benefits = [
   {
@@ -193,8 +197,52 @@ function ChatMockup() {
 }
 
 export function LandingPage() {
+  const router = useRouter()
+  const handleLogin = async (idToken: string) => {
+    try {
+      const res = await axios.post(`${BASE_URL}/users/auth/google`, {
+        id_token: idToken,
+      });
+      if (res.status == 201) {
+        console.log(res.data);
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
   const login = useGoogleLogin({
-    onSuccess: (tokenResponse) => console.log("token response", tokenResponse),
+    onSuccess: async (tokenResponse) => {
+      try {
+        const res = await axios.get(
+          "https://www.googleapis.com/oauth2/v3/userinfo",
+          {
+            headers: {
+              Authorization: `Bearer ${tokenResponse.access_token}`,
+            },
+          },
+        );
+
+        console.log(res.data);
+        const signinRes = await axios.post(`${BASE_URL}/users/auth/google`, {
+          name: res.data.name,
+          email: res.data.email,
+          profile_picture: res.data.picture,
+        });
+
+        if (signinRes.status == 201) {
+          await storeCookie("ohara_user_id", signinRes.data.user.id);
+          await storeCookie("ohara_token", signinRes.data.token.access_token);
+          await storeCookie(
+            "ohara_refresh_token",
+            signinRes.data.token.refresh_token,
+          );
+        }
+        router.push("/dashboard");
+      } catch (err) {
+        console.error("Failed to fetch user info:", err);
+      }
+    },
     onError: ({ error }) => console.log("error after login", error),
   });
 
@@ -260,7 +308,8 @@ export function LandingPage() {
             className="h-11 rounded-full px-6"
           >
             <a href="#how-it-works" className="flex gap-2 items-center">
-              <span>See how it works</span> <ChevronRight data-icon="inline-end" />
+              <span>See how it works</span>{" "}
+              <ChevronRight data-icon="inline-end" />
             </a>
           </Button>
         </div>

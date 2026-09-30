@@ -1,5 +1,8 @@
 import type { Website } from '@/types/knowledge-base';
 
+
+export const BASE_URL = "http://localhost:8080/api/v1"
+
 export const initialWebsites: Website[] = [
   {
     id: 1,
