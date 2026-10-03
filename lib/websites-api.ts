@@ -1,9 +1,27 @@
-import axios from 'axios'
+import axios, { AxiosHeaders } from 'axios'
+import { getCookie } from '@/actions/handleCookies'
+
+const getAuthToken = async () => {
+  const cookie = await getCookie('ohara_token')
+  return cookie?.value ?? ''
+}
 
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080',
+  baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api/v1',
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
+})
+
+api.interceptors.request.use(async (config) => {
+  const token = await getAuthToken()
+
+  if (!token) return config
+
+  const headers = AxiosHeaders.from(config.headers)
+  headers.set('Authorization', `Bearer ${token}`)
+  config.headers = headers
+
+  return config
 })
 
 export type Website = {
@@ -20,7 +38,7 @@ export type Website = {
 export type IndexedPage = { page_url: string }
 
 type WebsitesResponse = { websites?: Website[] }
-type IndexedPagesResponse = { indexed_page?: IndexedPage[] }
+type IndexedPagesResponse = { indexed_pages?: IndexedPage[] }
 
 export async function getWebsites() {
   const { data } = await api.get<WebsitesResponse | Website[]>('/websites')
@@ -37,8 +55,13 @@ export async function deleteWebsite(id: string) {
 }
 
 export async function getIndexedPages(id: string) {
-  const { data } = await api.get<IndexedPagesResponse>(`/websites/${encodeURIComponent(id)}/indexed`)
-  return data.indexed_page ?? []
+  const { data } = await api.get<IndexedPage[] | IndexedPagesResponse>(`/websites/${encodeURIComponent(id)}/indexed`)
+  return Array.isArray(data) ? data : data.indexed_pages ?? []
+}
+
+export async function getAllowedOrigins(id: string) {
+  const { data } = await api.get<{ allowed_origins: string[] | null }>(`/websites/${encodeURIComponent(id)}/allowed-origins`)
+  return data.allowed_origins ?? null
 }
 
 export async function updateAllowedOrigins(id: string, origins: string[]) {

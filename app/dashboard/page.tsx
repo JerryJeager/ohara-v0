@@ -7,5 +7,5 @@ export default async function Page() {
   const userData: User = await getUser();
   // console.log(userData)
   
-  return <DashboardPage />;
+  return <DashboardPage user={userData} />;
 }
