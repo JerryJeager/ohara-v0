@@ -61,17 +61,24 @@ export async function getIndexedPages(id: string) {
 
 export async function getAllowedOrigins(id: string) {
   const { data } = await api.get<{ allowed_origins: string[] | null }>(`/websites/${encodeURIComponent(id)}/allowed-origins`)
-  return data.allowed_origins ?? null
+  return data.allowed_origins ?? []
 }
 
 export async function updateAllowedOrigins(id: string, origins: string[]) {
-  await api.patch(`/websites/${encodeURIComponent(id)}/allowed-origins`, origins)
+  // send as an explicit object to match the GET shape { allowed_origins: [...] }
+  await api.patch(`/websites/${encodeURIComponent(id)}/allowed-origins`, [...origins])
 }
 
 export function isValidWebsiteUrl(value: string) {
   try {
     const url = new URL(value.startsWith('http') ? value : `https://${value}`)
-    return ['http:', 'https:'].includes(url.protocol) && Boolean(url.hostname.includes('.'))
+    // allow http(s) and also localhost or numeric IPv4 addresses
+    const isHttp = ['http:', 'https:'].includes(url.protocol)
+    const host = url.hostname || ''
+    const isLocalhost = host === 'localhost'
+    const isIPv4 = /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host)
+    const isDomain = host.includes('.')
+    return isHttp && (isDomain || isLocalhost || isIPv4)
   } catch {
     return false
   }
