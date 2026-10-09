@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const baseurl =
-  process.env.NODE_ENV === "production" ? "" : "http://localhost:8080/api/v1";
+  process.env.NODE_ENV === "production" ? "https://ohara-be-production.up.railway.app/api/v1" : "http://localhost:8080/api/v1";
 
 const opts = {
   httpOnly: true,
