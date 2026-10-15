@@ -17,9 +17,10 @@ import Image from "next/image";
 import logo from "../public/ohara-logo.png";
 import { GoogleLogin, googleLogout, useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
+import { useRouter } from "next/navigation";
 import { BASE_URL } from "@/data/websites";
 import { storeCookie } from "@/actions/handleCookies";
-import { useRouter } from "next/navigation";
+import { setCookie } from "@/actions/clientCookies";
 
 const benefits = [
   {
@@ -198,19 +199,6 @@ function ChatMockup() {
 
 export function LandingPage() {
   const router = useRouter()
-  const handleLogin = async (idToken: string) => {
-    try {
-      const res = await axios.post(`${BASE_URL}/users/auth/google`, {
-        id_token: idToken,
-      });
-      if (res.status == 201) {
-        console.log(res.data);
-      }
-    } catch (e) {
-      console.log(e);
-    }
-  };
-
   const login = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
@@ -223,22 +211,24 @@ export function LandingPage() {
           },
         );
 
-        console.log(res.data);
         const signinRes = await axios.post(`${BASE_URL}/users/auth/google`, {
           name: res.data.name,
           email: res.data.email,
           profile_picture: res.data.picture,
         });
 
-        if (signinRes.status == 201) {
-          await storeCookie("ohara_user_id", signinRes.data.user.id);
-          await storeCookie("ohara_token", signinRes.data.token.access_token);
-          await storeCookie(
-            "ohara_refresh_token",
-            signinRes.data.token.refresh_token,
-          );
+        const auth = signinRes.data?.token ?? signinRes.data
+        const successStatus = signinRes.status >= 200 && signinRes.status < 300
+
+        if (!successStatus || !auth?.access_token || !auth?.refresh_token) {
+          throw new Error("Google sign-in failed")
         }
-        router.push("/dashboard");
+
+        setCookie("ohara_token", auth.access_token, {maxAge: 3600, path: "/"})
+        setCookie("ohara_user_id", signinRes.data.user.id, {maxAge: 3600, path: "/"})
+        setCookie("ohara_refresh_token", auth.refresh_token, {maxAge: 60 * 60 * 24 * 7, path: "/"})
+
+        router.push("/dashboard")
       } catch (err) {
         console.error("Failed to fetch user info:", err);
       }

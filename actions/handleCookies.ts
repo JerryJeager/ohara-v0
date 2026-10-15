@@ -8,10 +8,9 @@ export const storeCookie = async (name: string, value: string) => {
 }
 
 export const getCookie = async (name: string) => {
-    return (await cookies()).get(name)
+  return (await cookies()).get(name)
 }
 
-
 export const deleteCookie = async (name: string) => {
-    (await cookies()).delete(name)
+  ;(await cookies()).delete(name)
 }

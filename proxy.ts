@@ -5,7 +5,6 @@ const baseurl =
   process.env.NODE_ENV === "production" ? "https://ohara-be-production.up.railway.app/api/v1" : "http://localhost:8080/api/v1";
 
 const opts = {
-  httpOnly: true,
   secure: process.env.NODE_ENV === "production",
   sameSite: "lax" as const,
   path: "/",
@@ -16,7 +15,7 @@ const toLogin = (req: NextRequest) => {
   ["ohara_token", "ohara_refresh_token", "ohara_user_id"].forEach((c) => res.cookies.delete(c));
   return res;
 };
-
+const isAuthFail = (s: number) => s === 401 || s === 403;
 export async function proxy(request: NextRequest) {
   const token = request.cookies.get("ohara_token")?.value;
   const refresh = request.cookies.get("ohara_refresh_token")?.value;
@@ -24,11 +23,19 @@ export async function proxy(request: NextRequest) {
   if (!token && !refresh) return toLogin(request);
 
   if (token) {
-    const res = await fetch(`${baseurl}/users`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    });
-    if (res.ok) return NextResponse.next();
+    try {
+      const res = await fetch(`${baseurl}/users`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      if (res.ok) return NextResponse.next();
+      console.log("[proxy] check failed:", res.status, await res.text());
+      // 5xx etc: don't log the user out because of a backend hiccup
+      if (!isAuthFail(res.status)) return NextResponse.next();
+    } catch (e) {
+      console.error("[proxy] fetch error", e);
+      return NextResponse.next();
+    }
   }
 
   if (!refresh) return toLogin(request);
@@ -38,16 +45,22 @@ export async function proxy(request: NextRequest) {
     headers: { Authorization: `Bearer ${refresh}` },
     cache: "no-store",
   });
-  if (!refreshRes.ok) return toLogin(request);
+  if (!refreshRes.ok) {
+    console.log("[proxy] refresh failed:", refreshRes.status, await refreshRes.text());
+    return toLogin(request);
+  }
 
   const data = await refreshRes.json();
+  const auth = data?.token ?? data;
+  if (!auth?.access_token || !auth?.refresh_token) return toLogin(request);
 
-  request.cookies.set("ohara_token", data.access_token);
-  request.cookies.set("ohara_refresh_token", data.refresh_token);
+  // make the new tokens visible to the page rendering THIS request
+  request.cookies.set("ohara_token", auth.access_token);
+  request.cookies.set("ohara_refresh_token", auth.refresh_token);
 
   const response = NextResponse.next({ request });
-  response.cookies.set("ohara_token", data.token.access_token, { ...opts, maxAge: 3600 });
-  response.cookies.set("ohara_refresh_token", data.token.refresh_token, { ...opts, maxAge: 60 * 60 * 24 * 7 });
+  response.cookies.set("ohara_token", auth.access_token, { ...opts, maxAge: 3600 });
+  response.cookies.set("ohara_refresh_token", auth.refresh_token, { ...opts, maxAge: 60 * 60 * 24 * 7 });
   return response;
 }
 
