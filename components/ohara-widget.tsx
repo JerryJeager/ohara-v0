@@ -2,6 +2,31 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { ArrowUp, ChevronDown, Sparkles, X } from "lucide-react";
+import ReactMarkdown, { type Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
+
+const mdComponents: Components = {
+  p: ({ children }) => <p className="[&:not(:first-child)]:mt-2">{children}</p>,
+  ul: ({ children }) => (
+    <ul className="mt-2 list-disc space-y-1 pl-4">{children}</ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="mt-2 list-decimal space-y-1 pl-4">{children}</ol>
+  ),
+  strong: ({ children }) => (
+    <strong className="font-semibold text-[#191918]">{children}</strong>
+  ),
+  a: ({ href, children }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="underline underline-offset-2 hover:opacity-70"
+    >
+      {children}
+    </a>
+  ),
+};
 
 // Commented out starter prompts for now per request
 // const starterPrompts = [
@@ -19,7 +44,10 @@ export function OharaWidget() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const websiteId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("websiteId") : null;
+  const websiteId =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("websiteId")
+      : null;
   const messagesRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -32,13 +60,20 @@ export function OharaWidget() {
     if (!trimmed || !websiteId) return;
 
     setError(null);
-    const userMsg: ChatMessage = { id: String(Date.now()), role: "user", text: trimmed };
+    const userMsg: ChatMessage = {
+      id: String(Date.now()),
+      role: "user",
+      text: trimmed,
+    };
     setMessages((c) => [...c, userMsg]);
     setMessage("");
 
     // optimistic assistant placeholder
     const assistantId = `a_${Date.now()}`;
-    setMessages((c) => [...c, { id: assistantId, role: "assistant", text: "" }]);
+    setMessages((c) => [
+      ...c,
+      { id: assistantId, role: "assistant", text: "" },
+    ]);
     setLoading(true);
 
     try {
@@ -49,7 +84,7 @@ export function OharaWidget() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ query: trimmed }),
           credentials: "include",
-        }
+        },
       );
 
       if (!res.ok) {
@@ -64,7 +99,11 @@ export function OharaWidget() {
       const msg = (err as Error)?.message ?? "Unknown error";
       setError(msg);
       // replace assistant placeholder with error text
-      setMessages((c) => c.map((m) => (m.id === assistantId ? { ...m, text: `Error: ${msg}` } : m)));
+      setMessages((c) =>
+        c.map((m) =>
+          m.id === assistantId ? { ...m, text: `Error: ${msg}` } : m,
+        ),
+      );
     } finally {
       setLoading(false);
     }
@@ -80,7 +119,9 @@ export function OharaWidget() {
     const chunkMs = 18;
     for (let i = 0; i <= full.length; i++) {
       const part = full.slice(0, i);
-      setMessages((c) => c.map((m) => (m.id === id ? { ...m, text: part } : m)));
+      setMessages((c) =>
+        c.map((m) => (m.id === id ? { ...m, text: part } : m)),
+      );
       // allow UI to update
       // eslint-disable-next-line no-await-in-loop
       await new Promise((r) => setTimeout(r, chunkMs));
@@ -107,33 +148,72 @@ export function OharaWidget() {
         >
           <header className="flex items-center justify-between border-b border-black/[.07] bg-[#232322] px-5 py-4 text-white">
             <div className="flex items-center gap-3">
-              <div className="flex size-9 items-center justify-center rounded-xl bg-white text-sm font-semibold text-[#242423]">o</div>
+              <div className="flex size-9 items-center justify-center rounded-xl bg-white text-sm font-semibold text-[#242423]">
+                o
+              </div>
               <div>
-                <p className="text-[14px] font-semibold tracking-[-0.01em]">Ohara</p>
-                <p className="mt-0.5 text-[11px] text-white/55">Typically replies instantly</p>
+                <p className="text-[14px] font-semibold tracking-[-0.01em]">
+                  Ohara
+                </p>
+                <p className="mt-0.5 text-[11px] text-white/55">
+                  Typically replies instantly
+                </p>
               </div>
             </div>
-            <button aria-label="Close Ohara chat" onClick={closeWidget} className="flex size-8 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white">
+            <button
+              aria-label="Close Ohara chat"
+              onClick={closeWidget}
+              className="flex size-8 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+            >
               <X className="size-4" />
             </button>
           </header>
 
-          <div ref={messagesRef} className="flex flex-1 flex-col overflow-y-auto px-5 py-6">
+          <div
+            ref={messagesRef}
+            className="flex flex-1 flex-col overflow-y-auto px-5 py-6"
+          >
             <div className="mb-6 flex items-center gap-2 text-[11px] text-black/35">
-              <div className="size-1.5 rounded-full bg-emerald-500" /> Ohara is online
+              <div className="size-1.5 rounded-full bg-emerald-500" /> Ohara is
+              online
             </div>
 
             {messages.length === 0 && (
               <div className="mb-5 flex items-start gap-2.5">
-                <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-[#242423] text-[11px] font-semibold text-white">o</div>
-                <div className="max-w-[285px] rounded-2xl rounded-tl-md bg-[#f0efec] px-4 py-3.5 text-[13px] leading-5 text-[#30302e]">Hi there. I&apos;m Ohara, the AI assistant for this site. How can I help you today?</div>
+                <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-[#242423] text-[11px] font-semibold text-white">
+                  o
+                </div>
+                <div className="max-w-[285px] rounded-2xl rounded-tl-md bg-[#f0efec] px-4 py-3.5 text-[13px] leading-5 text-[#30302e]">
+                  Hi there. I&apos;m Ohara, the AI assistant for this site. How
+                  can I help you today?
+                </div>
               </div>
             )}
 
             {messages.map((m) => (
-              <div key={m.id} className={`mt-5 flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`${m.role === "user" ? "max-w-[275px] rounded-2xl rounded-br-md bg-[#242423] text-white" : "max-w-[275px] rounded-2xl rounded-tl-md bg-[#f0efec] text-[#30302e]"} px-4 py-3 text-[13px] leading-5`}>
-                  {m.text}
+              <div
+                key={m.id}
+                className={`mt-5 flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`${m.role === "user" ? "max-w-[275px] rounded-2xl rounded-br-md bg-[#242423] text-white" : "max-w-[285px] rounded-2xl rounded-tl-md bg-[#f0efec] text-[#30302e]"} px-4 py-3 text-[13px] leading-5 break-words`}
+                >
+                  {m.role === "user" ? (
+                    <span className="whitespace-pre-wrap">{m.text}</span>
+                  ) : m.text === "" && loading ? (
+                    <span className="flex gap-1 py-1">
+                      <i className="size-1.5 animate-bounce rounded-full bg-black/30 [animation-delay:-0.3s]" />
+                      <i className="size-1.5 animate-bounce rounded-full bg-black/30 [animation-delay:-0.15s]" />
+                      <i className="size-1.5 animate-bounce rounded-full bg-black/30" />
+                    </span>
+                  ) : (
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={mdComponents}
+                    >
+                      {m.text}
+                    </ReactMarkdown>
+                  )}
                 </div>
               </div>
             ))}
@@ -142,18 +222,28 @@ export function OharaWidget() {
           </div>
 
           <div className="border-t border-black/[.07] bg-[#fbfaf8] p-4">
-            <form onSubmit={submitMessage} className="rounded-2xl border border-black/10 bg-white p-2 shadow-sm focus-within:border-black/25">
+            <form
+              onSubmit={submitMessage}
+              className="rounded-2xl border border-black/10 bg-white p-2 shadow-sm focus-within:border-black/25"
+            >
               <textarea
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && event.keyCode !== 229) {
+                  if (
+                    event.key === "Enter" &&
+                    !event.shiftKey &&
+                    !event.nativeEvent.isComposing &&
+                    event.keyCode !== 229
+                  ) {
                     event.preventDefault();
                     event.currentTarget.form?.requestSubmit();
                   }
                 }}
                 rows={2}
-                placeholder={websiteId ? "Ask a question..." : "No website selected"}
+                placeholder={
+                  websiteId ? "Ask a question..." : "No website selected"
+                }
                 aria-label="Message Ohara"
                 className="w-full resize-none bg-transparent px-2 py-1 text-[13px] outline-none placeholder:text-black/35"
               />
@@ -161,13 +251,19 @@ export function OharaWidget() {
                 <div className="flex items-center gap-1">
                   {/* attachments removed per request */}
                 </div>
-                <button type="submit" aria-label="Send message" disabled={!message.trim() || !websiteId || loading} className="flex size-8 items-center justify-center rounded-xl bg-[#242423] text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-25">
+                <button
+                  type="submit"
+                  aria-label="Send message"
+                  disabled={!message.trim() || !websiteId || loading}
+                  className="flex size-8 items-center justify-center rounded-xl bg-[#242423] text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-25"
+                >
                   <ArrowUp className="size-4" />
                 </button>
               </div>
             </form>
             <p className="mt-2 flex items-center justify-center gap-1 text-[10px] text-black/30">
-              Powered by <span className="font-semibold text-black/45">Ohara</span>
+              Powered by{" "}
+              <span className="font-semibold text-black/45">Ohara</span>
               <ChevronDown className="size-3 rotate-[-90deg]" />
             </p>
           </div>

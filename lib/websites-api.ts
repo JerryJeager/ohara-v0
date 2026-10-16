@@ -29,6 +29,7 @@ export type Website = {
   user_id: string
   url: string
   name: string
+  contact?: string | null
   status: '' | 'success' | 'failed' | string
   allowed_origins: string[] | null
   created_at: string
@@ -45,7 +46,7 @@ export async function getWebsites() {
   return Array.isArray(data) ? data : data.websites ?? []
 }
 
-export async function createWebsite(payload: { url: string; name: string }) {
+export async function createWebsite(payload: { url: string; name: string; contact?: string }) {
   const { data } = await api.post<{ website_id: string }>('/websites', payload)
   return data
 }
@@ -82,6 +83,16 @@ export function isValidWebsiteUrl(value: string) {
   } catch {
     return false
   }
+}
+
+export function isValidContact(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return true
+
+  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)
+  const isPhone = /^[+]?[(]?[0-9A-Za-z\s().-]{7,20}$/.test(trimmed.replace(/\s+/g, ' '))
+
+  return isEmail || isPhone
 }
 
 export function normalizeWebsiteUrl(value: string) {

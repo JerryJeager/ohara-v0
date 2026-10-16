@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Loader2,
   LogOut,
+  Mail,
   Plus,
   RefreshCw,
   Settings,
@@ -23,6 +24,7 @@ import {
   getIndexedPages,
   getWebsites,
   getAllowedOrigins,
+  isValidContact,
   isValidWebsiteUrl,
   normalizeWebsiteUrl,
   updateAllowedOrigins,
@@ -84,8 +86,7 @@ function ProfileAvatar({ user, className }: { user: User; className?: string }) 
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const label =
-    status === "success" ? "Ready" : status === "failed" ? "Failed" : "Indexing";
+  const label = status === "success" ? "Ready" : status === "failed" ? "Failed" : "Pending";
   const styles =
     status === "success"
       ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
@@ -105,7 +106,7 @@ function ScriptBlock({ id, onCopy }: { id: string; onCopy: () => void }) {
     "<script",
     `src=\"${typeof window !== "undefined" ? window.location.origin : ""}/widget.js\"`,
     `data-website-id=\"${id}\"`,
-    "defer",
+    "defer>",
   ];
   const scriptMarkup = parts.join(" ") + ("</scr" + "ipt>");
 
@@ -146,21 +147,25 @@ export function DashboardPage({ user }: { user: User }) {
       });
       return list;
     } catch (e) {
-      setError(getApiErrorMessage(e, "Could not load your website. Check that the API is running."));
+      setError(getApiErrorMessage(e, "We couldn’t load your websites right now. Please refresh or try again in a moment."));
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const isPendingWebsite = (status?: string) => status !== "success" && status !== "failed";
+  const hasPendingWebsite = websites.some((website) => isPendingWebsite(website.status));
 
   useEffect(() => {
     void load();
   }, [load]);
 
   useEffect(() => {
-    if (!selected || selected.status === "success" || selected.status === "failed") return;
+    const selectedPending = selected ? isPendingWebsite(selected.status) : false;
+    if (!selectedPending && !hasPendingWebsite) return;
     const timer = window.setInterval(() => void load(), 5000);
     return () => window.clearInterval(timer);
-  }, [selected, load]);
+  }, [selected, hasPendingWebsite, load]);
 
   useEffect(() => {
     if (!selected) {
@@ -202,22 +207,41 @@ export function DashboardPage({ user }: { user: User }) {
     const data = new FormData(event.currentTarget);
     const name = String(data.get("name") ?? "").trim();
     const rawUrl = String(data.get("url") ?? "").trim();
+    const contact = String(data.get("contact") ?? "").trim();
     if (!name || !isValidWebsiteUrl(rawUrl)) {
       setFormError("Enter a name and a valid website URL, such as yoursite.com.");
+      return;
+    }
+    if (contact && !isValidContact(contact)) {
+      setFormError("Enter a valid contact email or phone number, or leave it blank.");
       return;
     }
     setSubmitting(true);
     setFormError("");
     try {
-      const created = await createWebsite({ name, url: normalizeWebsiteUrl(rawUrl) });
+      const normalizedUrl = normalizeWebsiteUrl(rawUrl);
+      const created = await createWebsite({ name, url: normalizedUrl, contact: contact || undefined });
+      const newId = (created as any)?.website_id ?? (created as any)?.id;
+
+      if (newId) {
+        const optimisticWebsite: Website = {
+          id: newId,
+          user_id: user.id,
+          url: normalizedUrl,
+          name,
+          contact: contact || null,
+          status: "",
+          allowed_origins: [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        setWebsites((current) => [optimisticWebsite, ...current.filter((item) => item.id !== newId)]);
+        setSelected(optimisticWebsite);
+      }
+
       setModalOpen(false);
       event.currentTarget.reset();
-      const list = await load();
-      const newId = (created as any)?.website_id ?? (created as any)?.id;
-      if (list && newId) {
-        const found = list.find((w) => w.id === newId);
-        if (found) setSelected(found);
-      }
+      await load(newId);
     } catch (e) {
       setFormError(getApiErrorMessage(e, "Could not create the website. Please try again."));
     } finally {
@@ -280,6 +304,8 @@ export function DashboardPage({ user }: { user: User }) {
   };
 
   const displayPages = useMemo(() => pages.slice(0, 20), [pages]);
+
+  const selectedPending = selected ? isPendingWebsite(selected.status) : false;
 
   return (
     <div className="min-h-screen bg-background text-foreground md:flex">
@@ -364,6 +390,12 @@ export function DashboardPage({ user }: { user: User }) {
                         <StatusBadge status={selected.status} />
                       </div>
                       <a href={selected.url} target="_blank" rel="noreferrer" className="mt-1 inline-flex max-w-full items-center gap-1 break-all text-sm text-muted-foreground hover:text-foreground"><span className="break-all">{selected.url}</span><ExternalLink className="size-3 shrink-0" /></a>
+                      {selected.contact && (
+                        <p className="mt-2 inline-flex items-center gap-2 text-sm text-muted-foreground">
+                          <Mail className="size-3.5 shrink-0 text-primary" />
+                          <span>{selected.contact}</span>
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
@@ -372,8 +404,8 @@ export function DashboardPage({ user }: { user: User }) {
                   </div>
                 </div>
 
-                {selected.status !== "success" && selected.status !== "failed" && (
-                  <div className="mt-6 flex items-center gap-3 rounded-lg border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100"><Loader2 className="size-4 animate-spin" /><div className="break-words">Ohara is indexing your website. This can take a few minutes.</div></div>
+                {selectedPending && (
+                  <div className="mt-6 flex items-center gap-3 rounded-lg border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100"><Loader2 className="size-4 animate-spin" /><div className="break-words">Ohara is preparing your website for AI answers. This usually takes a few minutes, and we’ll update the status automatically.</div></div>
                 )}
 
                 {selected.status === "failed" && (
@@ -416,7 +448,13 @@ export function DashboardPage({ user }: { user: User }) {
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-5">
           <div role="dialog" aria-modal="true" aria-labelledby="add-website-title" className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl">
             <div className="flex items-start justify-between"><div><h2 id="add-website-title" className="text-lg font-semibold">Add your website</h2><p className="mt-1 text-sm text-muted-foreground">Ohara will crawl up to 20 pages from it.</p></div><button onClick={() => setModalOpen(false)} aria-label="Close dialog" className="rounded-md p-2 hover:bg-muted"><X className="size-4" /></button></div>
-            <form onSubmit={submitWebsite} className="mt-6 flex flex-col gap-4"><label className="flex flex-col gap-2 text-sm font-medium">Website name<input name="name" required placeholder="Acme Studio" className="h-10 rounded-lg border border-border bg-background px-3 font-normal outline-none focus:ring-2 focus:ring-primary" /></label><label className="flex flex-col gap-2 text-sm font-medium">Website URL<input name="url" required placeholder="acme.studio" className="h-10 rounded-lg border border-border bg-background px-3 font-normal outline-none focus:ring-2 focus:ring-primary" /></label>{formError && <p className="text-sm text-rose-300">{formError}</p>}<button disabled={submitting} className="mt-2 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-60">{submitting && <Loader2 className="size-4 animate-spin" />}{submitting ? "Starting indexing..." : "Create website"}</button></form>
+            <form onSubmit={submitWebsite} className="mt-6 flex flex-col gap-4">
+              <label className="flex flex-col gap-2 text-sm font-medium">Website name<input name="name" required placeholder="Acme Studio" className="h-10 rounded-lg border border-border bg-background px-3 font-normal outline-none focus:ring-2 focus:ring-primary" /></label>
+              <label className="flex flex-col gap-2 text-sm font-medium">Website URL<input name="url" required placeholder="acme.studio" className="h-10 rounded-lg border border-border bg-background px-3 font-normal outline-none focus:ring-2 focus:ring-primary" /></label>
+              <label className="flex flex-col gap-2 text-sm font-medium">Contact email or phone<span className="text-xs font-normal text-muted-foreground">Optional — use the address or number you want visitors to reach.</span><input name="contact" placeholder="hello@acme.com or +1 (555) 123-4567" className="h-10 rounded-lg border border-border bg-background px-3 font-normal outline-none focus:ring-2 focus:ring-primary" /></label>
+              {formError && <p className="text-sm text-rose-300">{formError}</p>}
+              <button disabled={submitting} className="mt-2 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-60">{submitting && <Loader2 className="size-4 animate-spin" />}{submitting ? "Starting indexing..." : "Create website"}</button>
+            </form>
           </div>
         </div>
       )}
