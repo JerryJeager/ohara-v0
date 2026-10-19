@@ -30,3 +30,7 @@ Users can add a website, allow Ohara to index its content, and receive an embedd
 - Embedded AI assistant configuration
 
 The frontend communicates with the Ohara backend to manage websites, monitor indexing status, configure widgets, and provide a streamlined experience for deploying AI-powered website assistants.
+
+## Backend
+
+- Backend repo: https://github.com/JerryJeager/ohara-be
