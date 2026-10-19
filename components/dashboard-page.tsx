@@ -6,17 +6,16 @@ import {
   Clipboard,
   ExternalLink,
   Globe2,
-  LayoutDashboard,
   Loader2,
   LogOut,
   Mail,
   Plus,
   RefreshCw,
   Settings,
-  Sparkles,
   Trash2,
   X,
 } from "lucide-react";
+import { googleLogout } from "@react-oauth/google";
 import {
   createWebsite,
   deleteWebsite,
@@ -31,15 +30,18 @@ import {
   type IndexedPage,
   type Website,
 } from "@/lib/websites-api";
+import { deleteCookie } from "@/actions/clientCookies";
 import { User } from "@/types/type";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import logo from "../public/ohara-logo.png";
 
 function Logo() {
   return (
     <div className="flex items-center gap-2.5">
-      <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground">
-        <Sparkles className="size-4" />
-      </span>
+      <div className="grid size-8 place-items-center overflow-hidden rounded-full border border-border bg-[#232322] shadow-sm">
+        <Image src={logo} alt="Ohara logo" width={32} height={32} className="size-full object-cover" />
+      </div>
       <span className="font-semibold tracking-tight">Ohara</span>
     </div>
   );
@@ -102,13 +104,12 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function ScriptBlock({ id, onCopy }: { id: string; onCopy: () => void }) {
-  const parts = [
+  const scriptMarkup = [
     "<script",
-    `src=\"${typeof window !== "undefined" ? window.location.origin : ""}/widget.js\"`,
-    `data-website-id=\"${id}\"`,
-    "defer>",
-  ];
-  const scriptMarkup = parts.join(" ") + ("</scr" + "ipt>");
+    `src="${typeof window !== "undefined" ? window.location.origin : ""}/widget.js"`,
+    `data-website-id="${id}"`,
+    "defer></script>",
+  ].join(" ");
 
   return (
     <div className="relative overflow-x-auto rounded-lg border border-border bg-background/70 p-4 pr-12 font-mono text-xs leading-6 text-muted-foreground">
@@ -121,6 +122,7 @@ function ScriptBlock({ id, onCopy }: { id: string; onCopy: () => void }) {
 }
 
 export function DashboardPage({ user }: { user: User }) {
+  const router = useRouter();
   const [websites, setWebsites] = useState<Website[]>([]);
   const [selected, setSelected] = useState<Website | null>(null);
   const displayName = user?.name?.trim() || "Your workspace";
@@ -190,13 +192,12 @@ export function DashboardPage({ user }: { user: User }) {
 
   const copyScript = async () => {
     if (!selected) return;
-    const parts = [
+    const script = [
       "<script",
-      `src=\"${window.location.origin}/widget.js\"`,
-      `data-website-id=\"${selected.id}\"`,
-      "defer",
-    ];
-    const script = parts.join(" ") + ("</scr" + "ipt>");
+      `src="${window.location.origin}/widget.js"`,
+      `data-website-id="${selected.id}"`,
+      "defer></script>",
+    ].join(" ");
     await navigator.clipboard.writeText(script);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
@@ -307,13 +308,22 @@ export function DashboardPage({ user }: { user: User }) {
 
   const selectedPending = selected ? isPendingWebsite(selected.status) : false;
 
+  const handleLogout = () => {
+    googleLogout();
+    deleteCookie("ohara_token");
+    deleteCookie("ohara_refresh_token");
+    deleteCookie("ohara_user_id");
+    router.push("/");
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground md:flex">
       <aside className="flex w-full shrink-0 flex-col border-b border-border bg-card/25 md:min-h-screen md:w-64 md:border-b-0 md:border-r">
         <div className="flex h-16 items-center justify-between px-5 md:px-6">
           <Logo />
-          <button className="rounded-md p-2 text-muted-foreground hover:bg-muted md:hidden" aria-label="Open menu">
-            <LayoutDashboard className="size-4" />
+          <button onClick={handleLogout} className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted md:hidden" aria-label="Sign out">
+            <LogOut className="size-3.5" />
+            Log out
           </button>
         </div>
         <nav className="flex gap-1 px-3 pb-3 md:flex-col md:px-3 md:py-5" aria-label="Main navigation">
@@ -323,7 +333,7 @@ export function DashboardPage({ user }: { user: User }) {
           </a>
           <a href="#settings" className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground">
             <Settings className="size-4" />
-            Settings
+            Access control
           </a>
         </nav>
         <div className="mt-auto hidden border-t border-border p-4 md:block">
@@ -333,7 +343,7 @@ export function DashboardPage({ user }: { user: User }) {
               <p className="truncate text-sm font-medium">{displayName}</p>
               <p className="truncate text-xs text-muted-foreground">{user.email || "Website owner"}</p>
             </div>
-            <button className="ml-auto rounded-md p-1.5 text-muted-foreground hover:bg-muted" aria-label="Sign out">
+            <button onClick={handleLogout} className="ml-auto rounded-md p-1.5 text-muted-foreground hover:bg-muted" aria-label="Sign out">
               <LogOut className="size-4" />
             </button>
           </div>
@@ -342,7 +352,7 @@ export function DashboardPage({ user }: { user: User }) {
       <main className="min-w-0 flex-1">
         <header className="flex min-h-16 items-center justify-between border-b border-border px-5 sm:px-8">
           <div>
-            <p className="text-xs text-muted-foreground">Workspace</p>
+            <p className="text-xs text-muted-foreground">Overview</p>
             <p className="text-sm font-medium">{displayName}</p>
           </div>
           <ProfileAvatar user={user} className="size-8" />
@@ -350,9 +360,9 @@ export function DashboardPage({ user }: { user: User }) {
         <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-10">
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
             <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-[.18em] text-primary">Website assistants</p>
-              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Welcome back, {displayName.split(" ")[0]}</h1>
-              <p className="mt-2 text-sm text-muted-foreground">Manage your website assistant and embedded chat widget.</p>
+              <p className="mb-2 text-[11px] font-medium uppercase tracking-[.18em] text-primary">Overview</p>
+              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Keep your website answering around the clock</h1>
+              <p className="mt-2 text-sm text-muted-foreground">Monitor your assistant, keep it live, and control where your widget is allowed to appear.</p>
             </div>
             {websites.length === 0 && (
               <button onClick={() => setModalOpen(true)} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">
@@ -417,7 +427,7 @@ export function DashboardPage({ user }: { user: User }) {
                 <>
                   <section className="mt-6 grid gap-4 lg:grid-cols-[1.15fr_.85fr]">
                     <div className="w-full min-w-0 rounded-xl border border-border bg-card/35 p-5">
-                      <div className="flex items-center justify-between"><div><h2 className="font-medium">Install your widget</h2><p className="mt-1 text-sm text-muted-foreground">Add this snippet before the closing body tag.</p></div><Check className="size-5 text-emerald-400" /></div>
+                      <div className="flex items-center justify-between"><div><h2 className="font-medium">Install your widget</h2><p className="mt-1 text-sm text-muted-foreground">Add this snippet inside the head of your site.</p></div><Check className="size-5 text-emerald-400" /></div>
                       <div className="mt-5"><ScriptBlock id={selected.id} onCopy={() => void copyScript()} />{copied && <p className="mt-2 text-xs text-emerald-300">Script copied to clipboard.</p>}</div>
                     </div>
                     <div className="w-full min-w-0 rounded-xl border border-border bg-card/35 p-5">
@@ -427,8 +437,8 @@ export function DashboardPage({ user }: { user: User }) {
                     </div>
                   </section>
 
-                  <section className="mt-6 rounded-xl border border-border bg-card/35 p-5">
-                    <div className="flex items-start justify-between gap-4"><div><h2 className="font-medium">Allowed origins</h2><p className="mt-1 text-sm text-muted-foreground">Only these domains can load your widget.</p></div><Settings className="size-5 text-muted-foreground" /></div>
+                  <section id="settings" className="mt-6 scroll-mt-24 rounded-xl border border-border bg-card/35 p-5">
+                    <div className="flex items-start justify-between gap-4"><div><h2 className="font-medium">Widget access</h2><p className="mt-1 text-sm text-muted-foreground">Control which websites are allowed to load your assistant.</p></div><Settings className="size-5 text-muted-foreground" /></div>
                     <div className="mt-5">
                       <div className="flex gap-2">
                         <input value={originInput} onChange={(event) => { setOriginInput(event.target.value); setOriginError(""); }} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void addOrigin(); } }} placeholder="https://yourdomain.com" className="h-10 min-w-0 flex-1 rounded-lg border border-border bg-background px-3 text-sm outline-none ring-primary focus:ring-2" />
@@ -442,6 +452,17 @@ export function DashboardPage({ user }: { user: User }) {
               )}
             </>
           )}
+
+          <div className="mt-8 flex flex-col gap-3 rounded-2xl border border-border bg-card/35 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium">Need help?</p>
+              <p className="text-sm text-muted-foreground">Questions, issues, or a quick check-in?</p>
+            </div>
+            <a href="mailto:amadijerry823@gmail.com" className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground hover:bg-muted">
+              <Mail className="size-4 text-primary" />
+              Contact us
+            </a>
+          </div>
         </div>
       </main>
       {modalOpen && (
@@ -451,7 +472,7 @@ export function DashboardPage({ user }: { user: User }) {
             <form onSubmit={submitWebsite} className="mt-6 flex flex-col gap-4">
               <label className="flex flex-col gap-2 text-sm font-medium">Website name<input name="name" required placeholder="Acme Studio" className="h-10 rounded-lg border border-border bg-background px-3 font-normal outline-none focus:ring-2 focus:ring-primary" /></label>
               <label className="flex flex-col gap-2 text-sm font-medium">Website URL<input name="url" required placeholder="acme.studio" className="h-10 rounded-lg border border-border bg-background px-3 font-normal outline-none focus:ring-2 focus:ring-primary" /></label>
-              <label className="flex flex-col gap-2 text-sm font-medium">Contact email or phone<span className="text-xs font-normal text-muted-foreground">Optional — use the address or number you want visitors to reach.</span><input name="contact" placeholder="hello@acme.com or +1 (555) 123-4567" className="h-10 rounded-lg border border-border bg-background px-3 font-normal outline-none focus:ring-2 focus:ring-primary" /></label>
+              <label className="flex flex-col gap-2 text-sm font-medium">Contact email or phone<span className="text-xs font-normal text-muted-foreground">use the address or number you want visitors to reach.</span><input name="contact" placeholder="hello@acme.com or +1 (555) 123-4567" className="h-10 rounded-lg border border-border bg-background px-3 font-normal outline-none focus:ring-2 focus:ring-primary" required /></label>
               {formError && <p className="text-sm text-rose-300">{formError}</p>}
               <button disabled={submitting} className="mt-2 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-primary-foreground disabled:opacity-60">{submitting && <Loader2 className="size-4 animate-spin" />}{submitting ? "Starting indexing..." : "Create website"}</button>
             </form>

@@ -4,7 +4,7 @@ import "./globals.css";
 import { GoogleAuthProvider } from "@/components/google-auth-provider";
 
 export const metadata: Metadata = {
-  title: "Ohara — AI support for your website",
+  title: "Ohara | AI support for your website",
   description:
     "Turn your website into an AI support assistant. Ohara learns from your content and helps visitors find answers instantly.",
   generator: "Ohara",

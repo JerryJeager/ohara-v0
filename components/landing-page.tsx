@@ -341,20 +341,44 @@ export function LandingPage() {
         </div>
         <div className="mt-14 grid gap-4 md:grid-cols-4">
           {[
-            "Add your website URL",
-            "Ohara crawls and indexes your content",
-            "Embed the chat widget",
-            "Visitors get answers instantly",
+            {
+              title: "Add your website",
+              text: "Drop in your site URL and start building the knowledge layer for your assistant.",
+            },
+            {
+              title: "Index your pages",
+              text: "Ohara visits your content, organizes it, and turns it into answer-ready context.",
+            },
+            {
+              title: "Embed the widget",
+              text: "Add a lightweight script to your site and let the assistant appear where visitors need it.",
+            },
+            {
+              title: "Answer instantly",
+              text: "Customers get fast, grounded responses without leaving the page or waiting on a team member.",
+            },
           ].map((step, i) => (
             <div
-              key={step}
-              className="relative rounded-xl border border-border bg-card p-5"
+              key={step.title}
+              className="group relative flex h-full flex-col rounded-2xl border border-border bg-card/70 p-5 shadow-[0_1px_0_rgba(15,23,42,0.04)] transition-colors duration-200"
             >
-              <span className="text-xs font-medium text-primary">0{i + 1}</span>
-              <p className="mt-12 text-sm font-medium leading-6">{step}</p>
-              {i < 3 && (
-                <ChevronRight className="absolute -right-3 top-1/2 z-10 hidden size-5 -translate-y-1/2 text-muted-foreground md:block" />
-              )}
+              <div className="mb-6 flex items-center justify-between">
+                <span className="grid size-8 place-items-center rounded-full border border-primary/20 bg-primary/10 text-xs font-semibold text-primary">
+                  {i + 1}
+                </span>
+                {i < 3 && (
+                  <ChevronRight className="hidden size-4 text-muted-foreground/80 md:block" />
+                )}
+              </div>
+              <p className="text-[11px] font-medium uppercase tracking-[.18em] text-muted-foreground">
+                Step {i + 1}
+              </p>
+              <h3 className="mt-3 text-base font-medium leading-6 text-foreground">
+                {step.title}
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                {step.text}
+              </p>
             </div>
           ))}
         </div>
@@ -425,7 +449,7 @@ export function LandingPage() {
             <a href="#how-it-works" className="hover:text-foreground">
               Documentation
             </a>
-            <a href="https://github.com" className="hover:text-foreground">
+            <a href="https://github.com/JerryJeager" className="hover:text-foreground">
               GitHub
             </a>
           </div>
