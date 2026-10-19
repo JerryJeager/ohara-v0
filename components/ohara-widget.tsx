@@ -241,9 +241,7 @@ export function OharaWidget() {
                   }
                 }}
                 rows={2}
-                placeholder={
-                  websiteId ? "Ask a question..." : "No website selected"
-                }
+                placeholder={"Ask a question..."}
                 aria-label="Message Ohara"
                 className="w-full resize-none bg-transparent px-2 py-1 text-[13px] outline-none placeholder:text-black/35"
               />
@@ -261,11 +259,15 @@ export function OharaWidget() {
                 </button>
               </div>
             </form>
-            <p className="mt-2 flex items-center justify-center gap-1 text-[10px] text-black/30">
+            <a
+              target="_blank"
+              href="https://ohara-v0.vercel.app"
+              className="mt-2 flex items-center justify-center gap-1 text-[10px] text-black/30"
+            >
               Powered by{" "}
               <span className="font-semibold text-black/45">Ohara</span>
               <ChevronDown className="size-3 rotate-[-90deg]" />
-            </p>
+            </a>
           </div>
         </section>
       )}

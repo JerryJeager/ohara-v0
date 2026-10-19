@@ -389,13 +389,13 @@ export function DashboardPage({ user }: { user: User }) {
                         <h2 className="min-w-0 max-w-full break-words text-lg font-medium">{selected.name}</h2>
                         <StatusBadge status={selected.status} />
                       </div>
-                      <a href={selected.url} target="_blank" rel="noreferrer" className="mt-1 inline-flex max-w-full items-center gap-1 break-all text-sm text-muted-foreground hover:text-foreground"><span className="break-all">{selected.url}</span><ExternalLink className="size-3 shrink-0" /></a>
+                      <div className="flex flex-col gap-2 lg:flex-row lg:justify-between lg:gap-8 lg:items-center w-full"><a href={selected.url} target="_blank" rel="noreferrer" className="mt-1 inline-flex max-w-full items-center gap-1 break-all text-sm text-muted-foreground hover:text-foreground"><span className="break-all">{selected.url}</span><ExternalLink className="size-3 shrink-0" /></a>
                       {selected.contact && (
                         <p className="mt-2 inline-flex items-center gap-2 text-sm text-muted-foreground">
                           <Mail className="size-3.5 shrink-0 text-primary" />
                           <span>{selected.contact}</span>
                         </p>
-                      )}
+                      )}</div>
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
