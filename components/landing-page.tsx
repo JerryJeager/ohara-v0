@@ -120,14 +120,14 @@ function ChatMockup() {
           <span className="size-2 rounded-full bg-slate-300" />
           <span className="size-2 rounded-full bg-slate-300" />
           <div className="mx-auto rounded-md bg-slate-100 px-20 py-1 text-[9px] text-slate-400 sm:px-32">
-            loop.studio
+            jeager.studio
           </div>
         </div>
         <div className="grid min-h-[350px] grid-cols-1 bg-white md:grid-cols-[1fr_270px]">
           <div className="relative p-6 sm:p-10">
             <div className="mb-10 flex items-center justify-between text-xs font-semibold">
               <span>
-                LOOP<span className="text-indigo-500">/</span>STUDIO
+                Jeager<span className="text-indigo-500">/</span>STUDIO
               </span>
               <div className="hidden gap-5 text-[10px] font-normal text-slate-400 sm:flex">
                 <span>Services</span>
@@ -189,10 +189,10 @@ function ChatMockup() {
           </div>
         </div>
       </div>
-      <div className="pointer-events-none absolute -bottom-4 -right-3 hidden rounded-xl border border-indigo-400/20 bg-indigo-500/10 px-3 py-2 text-[10px] text-indigo-200 shadow-xl sm:flex sm:items-center sm:gap-2">
+      {/* <div className="pointer-events-none absolute -bottom-4 -right-3 hidden rounded-xl border border-indigo-400/20 bg-indigo-500/10 px-3 py-2 text-[10px] text-indigo-200 shadow-xl sm:flex sm:items-center sm:gap-2">
         <span className="size-1.5 rounded-full bg-emerald-400" />
         Live on loop.studio
-      </div>
+      </div> */}
     </div>
   );
 }
