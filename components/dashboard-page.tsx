@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Check,
   Clipboard,
@@ -87,18 +87,47 @@ function ProfileAvatar({ user, className }: { user: User; className?: string }) 
   );
 }
 
+function normalizeWebsiteStatus(status?: string | null) {
+  return (status ?? "").trim().toLowerCase();
+}
+
+function isPendingWebsite(status?: string | null) {
+  const normalized = normalizeWebsiteStatus(status);
+
+  return (
+    normalized === "" ||
+    normalized === "pending" ||
+    normalized === "processing" ||
+    normalized === "queued" ||
+    normalized === "creating" ||
+    normalized === "created" ||
+    normalized === "indexing" ||
+    normalized === "in_progress" ||
+    normalized === "in-progress"
+  );
+}
+
+function isSuccessWebsiteStatus(status?: string | null) {
+  return normalizeWebsiteStatus(status) === "success";
+}
+
+function isFailedWebsiteStatus(status?: string | null) {
+  return normalizeWebsiteStatus(status) === "failed";
+}
+
 function StatusBadge({ status }: { status: string }) {
-  const label = status === "success" ? "Ready" : status === "failed" ? "Failed" : "Pending";
+  const normalized = normalizeWebsiteStatus(status);
+  const label = isSuccessWebsiteStatus(status) ? "Ready" : isFailedWebsiteStatus(status) ? "Failed" : "Pending";
   const styles =
-    status === "success"
+    isSuccessWebsiteStatus(status)
       ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
-      : status === "failed"
+      : isFailedWebsiteStatus(status)
       ? "border-rose-400/20 bg-rose-400/10 text-rose-300"
       : "border-amber-400/20 bg-amber-400/10 text-amber-300";
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs ${styles}`}>
       <span className="size-1.5 rounded-full bg-current" />
-      {label}
+      {normalized === "" ? "Pending" : label}
     </span>
   );
 }
@@ -113,7 +142,7 @@ function ScriptBlock({ id, onCopy }: { id: string; onCopy: () => void }) {
 
   return (
     <div className="relative overflow-x-auto rounded-lg border border-border bg-background/70 p-4 pr-12 font-mono text-xs leading-6 text-muted-foreground">
-      <code className="block min-w-[260px] break-words whitespace-pre-wrap">{scriptMarkup}</code>
+      <code className="block min-w-65 wrap-break-word whitespace-pre-wrap">{scriptMarkup}</code>
       <button onClick={onCopy} className="absolute right-3 top-3 rounded-md p-2 hover:bg-muted" aria-label="Copy installation script">
         <Clipboard className="size-4" />
       </button>
@@ -138,36 +167,99 @@ export function DashboardPage({ user }: { user: User }) {
   const [error, setError] = useState("");
   const [formError, setFormError] = useState("");
 
+  const loadRequestIdRef = useRef(0);
+  const excludedWebsiteIdsRef = useRef(new Set<string>());
+  const selectedIdRef = useRef<string | null>(null);
+
   const load = useCallback(async (preferredId?: string) => {
+    const requestId = ++loadRequestIdRef.current;
+
     try {
+      const serverList = await getWebsites();
+
+      if (requestId !== loadRequestIdRef.current) return;
+
+      const list = serverList.filter((website) => !excludedWebsiteIdsRef.current.has(website.id));
+
+      for (const id of excludedWebsiteIdsRef.current) {
+        if (!serverList.some((website) => website.id === id)) {
+          excludedWebsiteIdsRef.current.delete(id);
+        }
+      }
+
       setError("");
-      const list = await getWebsites();
       setWebsites(list);
+
       setSelected((current) => {
-        if (preferredId) return list.find((s) => s.id === preferredId) ?? current ?? list[0] ?? null;
-        return list.find((s) => s.id === current?.id) ?? list[0] ?? null;
+        const nextCandidate =
+          (preferredId ? list.find((website) => website.id === preferredId) : undefined) ??
+          list.find((website) => website.id === current?.id) ??
+          list[0] ??
+          null;
+
+        if (!current || !nextCandidate) return nextCandidate;
+
+        if (
+          current.id === nextCandidate.id &&
+          current.name === nextCandidate.name &&
+          current.url === nextCandidate.url &&
+          current.status === nextCandidate.status
+        ) {
+          return current;
+        }
+
+        return nextCandidate;
       });
-      return list;
     } catch (e) {
-      setError(getApiErrorMessage(e, "We couldn’t load your websites right now. Please refresh or try again in a moment."));
+      if (requestId === loadRequestIdRef.current) {
+        setError(getApiErrorMessage(e, "We couldn’t load your websites right now. Please refresh or try again in a moment."));
+      }
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
-  const isPendingWebsite = (status?: string) => status !== "success" && status !== "failed";
-  const hasPendingWebsite = websites.some((website) => isPendingWebsite(website.status));
+  useEffect(() => {
+    selectedIdRef.current = selected?.id ?? null;
+  }, [selected?.id]);
+
+  const hasPendingWebsite = useMemo(() => websites.some((website) => isPendingWebsite(website.status)), [websites]);
+  const selectedPending = selected ? isPendingWebsite(selected.status) : false;
 
   useEffect(() => {
     void load();
   }, [load]);
 
   useEffect(() => {
-    const selectedPending = selected ? isPendingWebsite(selected.status) : false;
-    if (!selectedPending && !hasPendingWebsite) return;
-    const timer = window.setInterval(() => void load(), 5000);
-    return () => window.clearInterval(timer);
-  }, [selected, hasPendingWebsite, load]);
+    if (!hasPendingWebsite && !selectedPending) return;
+
+    let cancelled = false;
+    let timer: number | undefined;
+    let attempt = 0;
+
+    const tick = async () => {
+      if (cancelled) return;
+
+      if (document.visibilityState === "visible") {
+        await load(selectedIdRef.current ?? undefined);
+      }
+
+      if (cancelled) return;
+
+      attempt += 1;
+      const delay = Math.min(5000 * 1.3 ** attempt, 30000);
+      timer = window.setTimeout(tick, delay);
+    };
+
+    timer = window.setTimeout(tick, 5000);
+
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [hasPendingWebsite, load, selectedPending]);
 
   useEffect(() => {
     if (!selected) {
@@ -185,7 +277,7 @@ export function DashboardPage({ user }: { user: User }) {
       }
     })();
 
-    if (selected.status === "success") {
+    if (isSuccessWebsiteStatus(selected.status)) {
       void getIndexedPages(selected.id).then(setPages).catch(() => setPages([]));
     }
   }, [selected]);
@@ -231,7 +323,7 @@ export function DashboardPage({ user }: { user: User }) {
           url: normalizedUrl,
           name,
           contact: contact || null,
-          status: "",
+          status: "pending",
           allowed_origins: [],
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -252,15 +344,34 @@ export function DashboardPage({ user }: { user: User }) {
 
   const removeWebsite = async () => {
     if (!selected || !window.confirm(`Delete ${selected.name}? This cannot be undone.`)) return;
+
+    const target = selected;
+
+    excludedWebsiteIdsRef.current.add(target.id);
+    loadRequestIdRef.current += 1;
+
     setDeleting(true);
+    setSelected(null);
+    setWebsites((current) => current.filter((website) => website.id !== target.id));
+
+    let deleted = false;
+
     try {
-      await deleteWebsite(selected.id);
-      setSelected(null);
-      await load();
+      await deleteWebsite(target.id);
+      deleted = true;
     } catch (e) {
+      excludedWebsiteIdsRef.current.delete(target.id);
+      loadRequestIdRef.current += 1;
+
+      setWebsites((current) => [target, ...current.filter((website) => website.id !== target.id)]);
+      setSelected(target);
       setError(getApiErrorMessage(e, "Could not delete the website."));
     } finally {
       setDeleting(false);
+    }
+
+    if (deleted) {
+      await load();
     }
   };
 
@@ -305,8 +416,6 @@ export function DashboardPage({ user }: { user: User }) {
   };
 
   const displayPages = useMemo(() => pages.slice(0, 20), [pages]);
-
-  const selectedPending = selected ? isPendingWebsite(selected.status) : false;
 
   const handleLogout = () => {
     googleLogout();
@@ -396,7 +505,7 @@ export function DashboardPage({ user }: { user: User }) {
                     <div className="grid size-11 shrink-0 place-items-center rounded-lg border border-border bg-background text-primary"><Globe2 className="size-5" /></div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-3">
-                        <h2 className="min-w-0 max-w-full break-words text-lg font-medium">{selected.name}</h2>
+                        <h2 className="min-w-0 max-w-full wrap-break-word text-lg font-medium">{selected.name}</h2>
                         <StatusBadge status={selected.status} />
                       </div>
                       <div className="flex flex-col gap-2 lg:flex-row lg:justify-between lg:gap-8 lg:items-center w-full"><a href={selected.url} target="_blank" rel="noreferrer" className="mt-1 inline-flex max-w-full items-center gap-1 break-all text-sm text-muted-foreground hover:text-foreground"><span className="break-all">{selected.url}</span><ExternalLink className="size-3 shrink-0" /></a>
@@ -415,15 +524,15 @@ export function DashboardPage({ user }: { user: User }) {
                 </div>
 
                 {selectedPending && (
-                  <div className="mt-6 flex items-center gap-3 rounded-lg border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100"><Loader2 className="size-4 animate-spin" /><div className="break-words">Ohara is preparing your website for AI answers. This usually takes a few minutes, and we’ll update the status automatically.</div></div>
+                  <div className="mt-6 flex items-center gap-3 rounded-lg border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100"><Loader2 className="size-4 animate-spin" /><div className="wrap-break-word">Ohara is preparing your website for AI answers. This usually takes a few minutes, and we’ll update the status automatically.</div></div>
                 )}
 
-                {selected.status === "failed" && (
+                {isFailedWebsiteStatus(selected.status) && (
                   <div className="mt-6 rounded-lg border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm leading-6 text-rose-100">We could not finish indexing this website. Check that it is online and does not block crawlers, then delete it and try again.</div>
                 )}
               </article>
 
-              {selected.status === "success" && (
+              {isSuccessWebsiteStatus(selected.status) && (
                 <>
                   <section className="mt-6 grid gap-4 lg:grid-cols-[1.15fr_.85fr]">
                     <div className="w-full min-w-0 rounded-xl border border-border bg-card/35 p-5">
@@ -433,7 +542,7 @@ export function DashboardPage({ user }: { user: User }) {
                     <div className="w-full min-w-0 rounded-xl border border-border bg-card/35 p-5">
                       <h2 className="font-medium">Indexed content</h2>
                       <p className="mt-1 text-sm text-muted-foreground">{pages.length} pages are ready for answers.</p>
-                      <div className="mt-4 max-h-40 overflow-auto rounded-lg border border-border">{displayPages.length ? displayPages.map((page) => <div key={page.page_url} className="border-b border-border px-3 py-2 text-xs text-muted-foreground last:border-0 break-words">{page.page_url}</div>) : <p className="p-3 text-xs text-muted-foreground">No indexed pages returned.</p>}</div>
+                      <div className="mt-4 max-h-40 overflow-auto rounded-lg border border-border">{displayPages.length ? displayPages.map((page) => <div key={page.page_url} className="border-b border-border px-3 py-2 text-xs text-muted-foreground last:border-0 wrap-break-word">{page.page_url}</div>) : <p className="p-3 text-xs text-muted-foreground">No indexed pages returned.</p>}</div>
                     </div>
                   </section>
 
