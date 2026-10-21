@@ -43,6 +43,7 @@ export function OharaWidget() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const genericFailureMessage = "The assistant is having trouble responding right now. Please try again in a moment.";
 
   const websiteId =
     typeof window !== "undefined"
@@ -88,20 +89,18 @@ export function OharaWidget() {
       );
 
       if (!res.ok) {
-        const payload = await res.json().catch(() => ({}));
-        throw new Error(payload?.message ?? `API error ${res.status}`);
+        throw new Error(genericFailureMessage);
       }
 
       const data = (await res.json()) as { response: string };
       // animate typing by gradually adding characters
       await typeOutAssistantResponse(assistantId, data.response);
-    } catch (err) {
-      const msg = (err as Error)?.message ?? "Unknown error";
-      setError(msg);
-      // replace assistant placeholder with error text
+    } catch {
+      setError(genericFailureMessage);
+      // replace assistant placeholder with a friendly, non-technical message
       setMessages((c) =>
         c.map((m) =>
-          m.id === assistantId ? { ...m, text: `Error: ${msg}` } : m,
+          m.id === assistantId ? { ...m, text: genericFailureMessage } : m,
         ),
       );
     } finally {
@@ -218,7 +217,11 @@ export function OharaWidget() {
               </div>
             ))}
 
-            {error && <div className="mt-4 text-sm text-rose-600">{error}</div>}
+            {error && (
+              <div className="mt-4 rounded-2xl border border-black/10 bg-[#f0efec] px-3 py-2 text-[12px] leading-5 text-[#44423f]">
+                {error}
+              </div>
+            )}
           </div>
 
           <div className="border-t border-black/[.07] bg-[#fbfaf8] p-4">
