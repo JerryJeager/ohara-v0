@@ -449,7 +449,7 @@ export function LandingPage() {
             <a href="#how-it-works" className="hover:text-foreground">
               Documentation
             </a>
-            <a href="https://github.com/JerryJeager" className="hover:text-foreground">
+            <a href="https://github.com/JerryJeager/ohara-be" className="hover:text-foreground">
               GitHub
             </a>
           </div>
